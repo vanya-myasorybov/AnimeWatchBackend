@@ -36,7 +36,7 @@ async fn main() -> anyhow::Result<()> {
 
     let jwt_service = JwtService::new(&config.jwt_secret, config.jwt_expiration);
 
-    let redis_service = RedisService::new(config.redis_url)?;
+    let redis_service = RedisService::new(config.redis_url).await?;
 
     let email_service = EmailService::new(config.email_config)?;
 

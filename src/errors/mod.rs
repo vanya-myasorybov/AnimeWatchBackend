@@ -3,6 +3,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use bb8_redis::redis;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 

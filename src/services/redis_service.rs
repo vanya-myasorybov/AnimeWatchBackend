@@ -1,16 +1,26 @@
-use redis::{AsyncCommands, Client, aio::MultiplexedConnection};
+use bb8_redis::{
+    RedisConnectionManager,
+    bb8::{self, PooledConnection},
+    redis,
+};
+use redis::AsyncCommands;
 
-use crate::errors::{AppError, Result};
+use crate::{
+    errors::{AppError, Result},
+    types::ConnectionPool,
+};
 
 #[derive(Clone)]
 pub struct RedisService {
-    client: redis::Client,
+    client: ConnectionPool,
 }
 
 impl RedisService {
-    pub fn new(redis_url: String) -> Result<Self> {
-        let client = Client::open(redis_url)
-            .map_err(|_| AppError::BadRequest(String::from("Redis is field connection")))?;
+    pub async fn new(redis_url: String) -> Result<Self> {
+        let manager = RedisConnectionManager::new(redis_url).unwrap();
+
+        let client = bb8::Pool::builder().build(manager).await.unwrap();
+
         Ok(RedisService { client })
     }
     pub async fn get<T>(&self, key: &str) -> Result<Option<T>>
@@ -38,10 +48,10 @@ impl RedisService {
         conn.del(key).await.map_err(|e| AppError::Redis(e))
     }
 
-    async fn get_connection(&self) -> Result<MultiplexedConnection> {
+    async fn get_connection(&self) -> Result<PooledConnection<RedisConnectionManager>> {
         self.client
-            .get_multiplexed_async_connection()
+            .get()
             .await
-            .map_err(|e| AppError::Redis(e))
+            .map_err(|e| AppError::BadRequest(format!("Failed to get Redis connection: {}", e)))
     }
 }
